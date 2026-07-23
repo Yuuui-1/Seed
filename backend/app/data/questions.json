@@ -1,0 +1,43 @@
+[
+  {"id":"q001","dimension":"thinking","text":"面对复杂问题时，我习惯先拆解成小部分再逐一解决","reverse":false,"source":"NFC #Q04 adapted","weight":0.95},
+  {"id":"q002","dimension":"thinking","text":"我喜欢分析事物背后的逻辑和规律","reverse":false,"source":"NFC #Q01 adapted","weight":0.95},
+  {"id":"q003","dimension":"thinking","text":"比起凭直觉，我更依赖数据和事实做决策","reverse":false,"source":"NFC #Q07 adapted","weight":0.9},
+  {"id":"q004","dimension":"thinking","text":"对于复杂的问题，我宁愿不去深思","reverse":true,"source":"NFC #Q12 adapted","weight":0.9},
+  {"id":"q005","dimension":"thinking","text":"当别人提出一个观点时，我会习惯性地质疑和求证","reverse":false,"source":"self","weight":0.75},
+  {"id":"q006","dimension":"thinking","text":"我喜欢解决那些需要仔细思考的难题","reverse":false,"source":"NFC #Q09 adapted","weight":0.95},
+
+  {"id":"q007","dimension":"creativity","text":"我经常产生新颖的想法和解决方案","reverse":false,"source":"BigFive-Openness #Q05 adapted","weight":0.95},
+  {"id":"q008","dimension":"creativity","text":"我愿意尝试不同的方法来解决问题","reverse":false,"source":"BigFive-Openness #Q12 adapted","weight":0.9},
+  {"id":"q009","dimension":"creativity","text":"我对新事物和变化持开放态度","reverse":false,"source":"BigFive-Openness #Q03 adapted","weight":0.9},
+  {"id":"q010","dimension":"creativity","text":"比起遵循既定规则，我更喜欢探索新的可能性","reverse":false,"source":"self","weight":0.75},
+  {"id":"q011","dimension":"creativity","text":"在头脑风暴中，我通常是思路最多的那个人","reverse":false,"source":"self","weight":0.75},
+  {"id":"q012","dimension":"creativity","text":"我觉得自己不是一个有想象力的人","reverse":true,"source":"BigFive-Openness #Q20 adapted","weight":0.9},
+
+  {"id":"q013","dimension":"execution","text":"一旦设定目标，我会坚持到底直到完成","reverse":false,"source":"Grit #Q01 adapted","weight":0.95},
+  {"id":"q014","dimension":"execution","text":"我能高效地管理时间和任务优先级","reverse":false,"source":"BigFive-Conscientiousness #Q04 adapted","weight":0.9},
+  {"id":"q015","dimension":"execution","text":"面对困难时我不会轻易放弃","reverse":false,"source":"Grit #Q03 adapted","weight":0.95},
+  {"id":"q016","dimension":"execution","text":"我做事经常有头无尾","reverse":true,"source":"BigFive-Conscientiousness #Q18 adapted","weight":0.95},
+  {"id":"q017","dimension":"execution","text":"我喜欢严格按照计划行事","reverse":false,"source":"BigFive-Conscientiousness #Q08 adapted","weight":0.9},
+  {"id":"q018","dimension":"execution","text":"即使在缺乏外部监督的情况下，我也能自律地完成任务","reverse":false,"source":"self","weight":0.75},
+
+  {"id":"q019","dimension":"social","text":"在团队中我善于协调不同成员的意见","reverse":false,"source":"BigFive-Agreeableness #Q06 adapted","weight":0.9},
+  {"id":"q020","dimension":"social","text":"我乐于倾听他人的观点和感受","reverse":false,"source":"BigFive-Agreeableness #Q02 adapted","weight":0.9},
+  {"id":"q021","dimension":"social","text":"在社交场合中，我通常是主动发起对话的人","reverse":false,"source":"BigFive-Extraversion #Q01 adapted","weight":0.9},
+  {"id":"q022","dimension":"social","text":"我更倾向于独自工作而非团队合作","reverse":true,"source":"BigFive-Extraversion #Q15 adapted","weight":0.9},
+  {"id":"q023","dimension":"social","text":"我能够敏锐地察觉到他人的情绪变化","reverse":false,"source":"self","weight":0.75},
+  {"id":"q024","dimension":"social","text":"当朋友遇到困扰时，他们常常会来找我倾诉","reverse":false,"source":"self","weight":0.75},
+
+  {"id":"q025","dimension":"emotional","text":"面对压力时我能保持冷静并调整状态","reverse":false,"source":"BigFive-Neuroticism #Q05 adapted","weight":0.95},
+  {"id":"q026","dimension":"emotional","text":"我很少感到焦虑或紧张","reverse":false,"source":"BigFive-Neuroticism #Q01 adapted","weight":0.95},
+  {"id":"q027","dimension":"emotional","text":"遇到挫折后我很快就能恢复状态","reverse":false,"source":"self","weight":0.8},
+  {"id":"q028","dimension":"emotional","text":"我经常因为小事过度担心","reverse":true,"source":"BigFive-Neuroticism #Q10 adapted","weight":0.95},
+  {"id":"q029","dimension":"emotional","text":"我能很好地控制自己的情绪反应","reverse":false,"source":"self","weight":0.75},
+  {"id":"q030","dimension":"emotional","text":"面对不确定性时，我仍然能够保持心态平稳","reverse":false,"source":"self","weight":0.7},
+
+  {"id":"q031","dimension":"drive","text":"我充满内在动力去追求更高的目标","reverse":false,"source":"SDT #Q03 adapted","weight":0.9},
+  {"id":"q032","dimension":"drive","text":"我所做的事情大多出于兴趣而非外界的期望","reverse":false,"source":"SDT #Q05 adapted","weight":0.9},
+  {"id":"q033","dimension":"drive","text":"即使没有额外奖励，我也愿意出色地完成工作","reverse":false,"source":"Grit #Q08 adapted","weight":0.85},
+  {"id":"q034","dimension":"drive","text":"我常常感到缺乏前进的动力","reverse":true,"source":"SDT #Q12 adapted","weight":0.9},
+  {"id":"q035","dimension":"drive","text":"我对自己的人生方向有清晰的规划","reverse":false,"source":"self","weight":0.75},
+  {"id":"q036","dimension":"drive","text":"竞争环境能激发我展现出更好的自己","reverse":false,"source":"self","weight":0.7}
+]
