@@ -149,7 +149,7 @@ onBeforeUnmount(() => {
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-xs font-semibold uppercase tracking-[.18em] text-[var(--seed-muted)]">六维能力图谱</p>
-                <h2 class="mt-2 text-xl font-semibold">整体优势分布</h2>
+                <h2 class="mt-3 mb-5 text-xl font-semibold">整体优势分布</h2>
               </div>
               <span class="rounded-full bg-[var(--seed-green-soft)] px-3 py-1 text-xs font-semibold text-[var(--seed-green)]">科学量表</span>
             </div>

@@ -17,7 +17,7 @@ DIMENSION_LABELS = {
     "thinking": "思维力", "creativity": "创造力", "execution": "执行力",
     "social": "社交力", "emotional": "情绪力", "drive": "驱动力",
 }
-TOTAL_ROUNDS = 10  # Fixed for MVP; adaptive version will vary
+TOTAL_ROUNDS = 24  # Min ~3 questions per dimension; adaptive may extend to 30
 
 async def select_next_question(answered_ids: list[str], answered_dimensions: dict[str, int]) -> dict | None:
     """Select next question prioritizing uncovered dimensions, then low-coverage ones."""
