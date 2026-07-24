@@ -4,6 +4,10 @@ export function generateReport(assessmentId: number) {
   return client.post(`/reports/generate/${assessmentId}`)
 }
 
+export function getReportByAssessment(assessmentId: number) {
+  return client.get(`/reports/by-assessment/${assessmentId}`)
+}
+
 export function getReport(reportId: number) {
   return client.get(`/reports/${reportId}`)
 }

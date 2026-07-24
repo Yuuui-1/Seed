@@ -24,6 +24,28 @@ async def list_reports(
         items.append({"id": r.id, "created_at": r.created_at.isoformat(), "dimensions": dims_summary})
     return {"code": 0, "data": {"items": items, "total": total, "page": page, "page_size": page_size}, "msg": "success"}
 
+@router.get("/by-assessment/{assessment_id}")
+async def get_report_by_assessment(assessment_id: int, user_id: int = Depends(require_auth), db: AsyncSession = Depends(get_session)):
+    result = await db.execute(
+        select(Report).where(Report.assessment_id == assessment_id, Report.user_id == user_id)
+    )
+    report = result.scalar_one_or_none()
+    if not report:
+        raise HTTPException(404, detail={"code": 1003, "msg": "报告不存在"})
+    return {
+        "code": 0,
+        "data": {
+            "id": report.id,
+            "assessment_id": report.assessment_id,
+            "dimensions": report.dimensions,
+            "summary": report.summary,
+            "career_suggestions": report.career_suggestions,
+            "created_at": report.created_at.isoformat(),
+            "shared": False,
+        },
+        "msg": "success",
+    }
+
 @router.get("/{report_id}")
 async def get_report(report_id: int, user_id: int = Depends(require_auth), db: AsyncSession = Depends(get_session)):
     report = await report_service.get_report(db, report_id, user_id)

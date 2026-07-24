@@ -63,6 +63,14 @@ async def submit_answer(
 
     if next_round >= TOTAL_ROUNDS:
         assessment.status = "completed"
+        await db.commit()
+        await db.refresh(assessment)
+        # Auto-generate report if user is authenticated
+        if assessment.user_id is not None:
+            try:
+                await finalize_report(db, assessment_id, assessment.user_id)
+            except: pass
+        return assessment, {"type": "complete", "assessment_id": assessment.id}
 
     await db.commit()
     await db.refresh(assessment)

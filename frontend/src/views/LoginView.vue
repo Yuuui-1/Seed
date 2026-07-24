@@ -18,55 +18,38 @@ async function handleLogin() {
     router.push('/')
   } catch (e: any) {
     error.value = e.response?.data?.msg || '登录失败'
-  } finally {
-    loading.value = false
-  }
+  } finally { loading.value = false }
 }
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col px-6 pt-20">
-    <div class="mb-10">
-      <h1 class="text-2xl font-bold text-slate-800">欢迎回来</h1>
-      <p class="text-slate-400 mt-1">登录查看你的优势报告</p>
-    </div>
+  <div class="min-h-screen flex flex-col px-6 pt-20" style="background: #f8f6f0">
+    <h1 class="display-font text-3xl font-semibold mb-1" style="color: #5a4220">欢迎回来</h1>
+    <p class="text-sm mb-10" style="color: #9b8a70">登录查看你的优势报告</p>
 
     <form @submit.prevent="handleLogin" class="space-y-4">
-      <div>
-        <label class="block text-sm text-slate-500 mb-1">邮箱</label>
-        <input
-          v-model="email"
-          type="email"
-          required
-          class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-400 focus:outline-none text-slate-800"
-          placeholder="your@email.com"
-        />
-      </div>
-      <div>
-        <label class="block text-sm text-slate-500 mb-1">密码</label>
-        <input
-          v-model="password"
-          type="password"
-          required
-          class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-400 focus:outline-none text-slate-800"
-          placeholder="8-32位密码"
-        />
-      </div>
-
-      <p v-if="error" class="text-red-400 text-sm">{{ error }}</p>
-
-      <button
-        type="submit"
-        :disabled="loading"
-        class="w-full py-3 rounded-xl bg-indigo-500 text-white font-medium text-lg disabled:opacity-50"
-      >
-        {{ loading ? '登录中...' : '登录' }}
-      </button>
+      <input v-model="email" type="email" placeholder="your@email.com" required
+        class="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all"
+        style="background: #fff; border: 2px solid #e2d8c0; color: #5a4220"
+        :style="error ? 'border-color: #d88' : ''"
+        @focus="$event.target.style.borderColor = '#b8945a'"
+        @blur="$event.target.style.borderColor = '#e2d8c0'"
+      />
+      <input v-model="password" type="password" placeholder="密码" required
+        class="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all"
+        style="background: #fff; border: 2px solid #e2d8c0; color: #5a4220"
+        @focus="$event.target.style.borderColor = '#b8945a'"
+        @blur="$event.target.style.borderColor = '#e2d8c0'"
+      />
+      <p v-if="error" class="text-sm" style="color: #d88">{{ error }}</p>
+      <button type="submit" :disabled="loading"
+        class="w-full py-3.5 rounded-xl text-white font-semibold text-lg transition-all active:scale-95"
+        style="background: linear-gradient(135deg, #b8945a, #a07a40)"
+        :style="loading ? 'opacity: 0.7' : ''"
+      >{{ loading ? '登录中...' : '登录' }}</button>
     </form>
-
-    <p class="text-center text-slate-400 mt-6">
-      还没有账号？
-      <router-link to="/register" class="text-indigo-500 font-medium">立即注册</router-link>
+    <p class="text-center text-sm mt-6" style="color: #9b8a70">
+      还没有账号？<router-link to="/register" style="color: #8ba888" class="font-medium">立即注册</router-link>
     </p>
   </div>
 </template>
