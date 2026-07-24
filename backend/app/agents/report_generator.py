@@ -85,24 +85,50 @@ async def generate_dimension_report(dimension: str, score: float, evidence: list
 
 async def generate_career_suggestions(scores: dict, llm=None) -> list[dict]:
     """Generate career direction suggestions based on dimension scores."""
-    sorted_dims = sorted(scores.items(), key=lambda x: x[1]["score"], reverse=True)
     career_map = {
-        "thinking": [{"direction": "数据分析师", "match": 90, "reason": "你的系统思维和分析能力是该岗位的核心素质"}, {"direction": "管理咨询", "match": 85, "reason": "结构化思维和逻辑推理能力适合咨询行业"}],
-        "creativity": [{"direction": "产品设计师", "match": 90, "reason": "你的创造力和发散思维是设计的核心驱动力"}, {"direction": "内容创作者", "match": 85, "reason": "创意能力让你在内容领域有独特优势"}],
-        "execution": [{"direction": "项目经理", "match": 90, "reason": "出色的执行力和目标导向性让你适合项目管理工作"}, {"direction": "运营管理", "match": 85, "reason": "自律和计划性是运营岗位的重要品质"}],
-        "social": [{"direction": "用户研究员", "match": 90, "reason": "你的共情和沟通能力是理解用户需求的关键"}, {"direction": "BD/商务拓展", "match": 85, "reason": "人际影响力适合商务和关系型工作"}],
-        "emotional": [{"direction": "团队领导", "match": 85, "reason": "情绪稳定性是领导力的基础"}, {"direction": "心理咨询师", "match": 80, "reason": "情绪觉察和管理能力是咨询的核心素质"}],
-        "drive": [{"direction": "创业者", "match": 88, "reason": "强大的内驱力和成就动机是创业者的核心特质"}, {"direction": "自由职业者", "match": 85, "reason": "自驱力让你能够独立高效地工作"}],
+        "thinking": [
+            {"direction": "战略分析师", "reason": "你擅长从复杂信息中提取规律和逻辑"},
+            {"direction": "管理咨询顾问", "reason": "结构化思维是咨询行业最看重的素质"},
+            {"direction": "数据科学家", "reason": "严密的推理能力让你在数据领域如鱼得水"},
+        ],
+        "creativity": [
+            {"direction": "产品设计师", "reason": "将创造力转化为可感知的体验是你的天赋"},
+            {"direction": "品牌策划", "reason": "独特的审美和创意驱动品牌差异化"},
+            {"direction": "编剧 / 内容创作", "reason": "叙事能力和想象力是内容工作者的核心"},
+        ],
+        "execution": [
+            {"direction": "项目经理", "reason": "把想法落地成行动是你的核心长板"},
+            {"direction": "产品运营", "reason": "系统性推进和多线程协调是你的优势领域"},
+            {"direction": "创业者", "reason": "自驱力和目标感是创业者的基石"},
+        ],
+        "social": [
+            {"direction": "用户研究员", "reason": "共情和洞察力让你天然理解用户需求"},
+            {"direction": "HR / 组织发展", "reason": "人际敏感度是组织管理的珍贵品质"},
+            {"direction": "社区运营", "reason": "你善于营造让人信任和投入的氛围"},
+        ],
+        "emotional": [
+            {"direction": "临床心理咨询师", "reason": "情绪觉察和调节能力是助人者的核心"},
+            {"direction": "危机公关 / 法务", "reason": "在高压下保持冷静是稀缺的职业素质"},
+            {"direction": "团队管理者", "reason": "稳定的情绪输出是团队的压舱石"},
+        ],
+        "drive": [
+            {"direction": "独立创作者", "reason": "不需要外界驱动力就能持续产出"},
+            {"direction": "社会企业家", "reason": "内在使命感和驱动力的结合"},
+            {"direction": "学者 / 研究员", "reason": "对深度和卓越的追求与学术气质契合"},
+        ],
     }
+    # Only suggest careers for dimensions scoring above 50
     suggestions = []
     seen = set()
-    for dim in [d[0] for d in sorted_dims[:3]]:
+    high_dims = [(dim, data) for dim, data in scores.items() if data["score"] >= 50]
+    high_dims.sort(key=lambda x: x[1]["score"], reverse=True)
+    for dim, data in high_dims:
         for s in career_map.get(dim, []):
-            if s["direction"] not in seen:
-                s["match"] = min(97, 40 + int(scores[dim]["score"] * 0.6))
+            if s["direction"] not in seen and len(suggestions) < 6:
+                s["match"] = min(97, int(data["score"] * 0.85 + 10))
                 suggestions.append(s)
                 seen.add(s["direction"])
-    return suggestions[:5]
+    return suggestions[:6]
 
 
 async def generate_summary(scores: dict) -> str:

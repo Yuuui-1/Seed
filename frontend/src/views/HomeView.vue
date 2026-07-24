@@ -58,9 +58,9 @@ function logout() {
           <span class="h-1.5 w-1.5 rounded-full bg-[var(--seed-green)]" />
           科学量表 × 自适应选题
         </div>
-        <h1 class="text-[clamp(3rem,8vw,6.7rem)] font-semibold leading-[1.05] tracking-[-.04em] text-[var(--seed-ink)]">
+        <h1 class="text-[clamp(2.8rem,7vw,6rem)] font-bold leading-[1.1] tracking-[-.02em] text-[var(--seed-ink)]" style="font-family: Georgia, 'Noto Serif SC', 'STSong', 'Songti SC', serif; font-style: italic;">
           看见你的<br>
-          <span class="text-[var(--seed-green)]">成长优势。</span>
+          <span class="text-[var(--seed-green)]" style="font-style: normal; font-weight: 700;">成长优势。</span>
         </h1>
         <p class="mt-7 max-w-xl text-lg leading-8 text-[var(--seed-muted)] md:text-xl">
           基于大五人格、认知需求、自我决定理论，通过自适应选题深入了解你的六维心理画像。
