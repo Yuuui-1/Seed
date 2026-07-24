@@ -41,6 +41,7 @@ const loading = ref(true)
 const submitting = ref(false)
 const generating = ref(false)
 const error = ref('')
+const lastAnswerUndone = ref(false)
 
 const progress = computed(() => Math.max(4, (currentRound.value / totalRounds.value) * 100))
 const dimensionLabel = computed(() => dimensionNames[question.value?.dimension || ''] || '优势探索')
@@ -158,6 +159,27 @@ async function submitAnswer(value: number) {
   }
 }
 
+async function undoLast() {
+  if (currentRound.value <= 0) return
+  try {
+    const r = await fetch(`/api/v1/assessment/${assessmentId.value}/undo`, {
+      method: 'POST', headers: authHeaders(),
+    })
+    if (r.ok) {
+      lastAnswerUndone.value = true
+      currentRound.value = Math.max(0, currentRound.value - 1)
+      selected.value = null
+      question.value = null
+      // Fetch current state
+      const res = await fetch(`/api/v1/assessment/${assessmentId.value}/progress`, { headers: authHeaders() })
+      if (res.ok) {
+        const p = await res.json()
+        currentRound.value = p.data.current_round
+      }
+    }
+  } catch {}
+}
+
 onMounted(startAssessment)
 </script>
 
@@ -170,6 +192,12 @@ onMounted(startAssessment)
           <span>Seed</span>
         </button>
         <button class="min-h-11 rounded-xl px-3 text-sm font-medium text-[var(--seed-muted)]" @click="router.push('/')">暂时退出</button>
+        <button
+          v-if="currentRound > 0 && !submitting"
+          class="min-h-11 rounded-xl px-3 text-sm font-medium text-[var(--seed-muted)]"
+          @click="undoLast"
+          :disabled="submitting"
+        >撤销上一题</button>
       </div>
     </header>
 

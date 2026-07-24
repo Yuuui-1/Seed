@@ -82,3 +82,10 @@ async def bind_assessment(assessment_id: int, user_id: int = Depends(require_aut
     if not ok:
         raise HTTPException(404, detail={"code": 1003, "msg": "测评不存在或已绑定"})
     return {"code": 0, "data": {"bound": True}, "msg": "success"}
+
+@router.post("/{assessment_id}/undo")
+async def undo_answer(assessment_id: int, user_id: int = Depends(require_auth), db: AsyncSession = Depends(get_session)):
+    ok = await assessment_service.undo_last_answer(db, assessment_id, user_id)
+    if not ok:
+        raise HTTPException(400, detail={"code": 1005, "msg": "无法撤销，可能已无更多回答"})
+    return {"code": 0, "data": {"undone": True, "current_round": (await assessment_service.get_owned_assessment(db, assessment_id, user_id)).current_round}, "msg": "success"}

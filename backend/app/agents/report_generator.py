@@ -99,7 +99,7 @@ async def generate_career_suggestions(scores: dict, llm=None) -> list[dict]:
     for dim in [d[0] for d in sorted_dims[:3]]:
         for s in career_map.get(dim, []):
             if s["direction"] not in seen:
-                s["match"] = min(95, s["match"] + int(scores[dim]["score"] / 10) - 50)
+                s["match"] = min(97, 40 + int(scores[dim]["score"] * 0.6))
                 suggestions.append(s)
                 seen.add(s["direction"])
     return suggestions[:5]
