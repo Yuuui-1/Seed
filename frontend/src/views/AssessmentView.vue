@@ -1,284 +1,244 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { generateReport, getGeneratedReportId } from '@/api/report'
+
+interface Question {
+  questionId: string
+  text: string
+  agentMessage: string
+  dimension: string
+  round: number
+}
+
+const labels: Record<number, string> = {
+  1: '非常不符合',
+  2: '不太符合',
+  3: '一般',
+  4: '比较符合',
+  5: '非常符合',
+}
+
+const dimensionNames: Record<string, string> = {
+  thinking: '思维方式',
+  creativity: '创造倾向',
+  execution: '行动模式',
+  social: '协作方式',
+  emotional: '情绪韧性',
+  drive: '内在驱动',
+}
 
 const router = useRouter()
 const auth = useAuthStore()
-
-interface Message {
-  role: 'agent' | 'user' | 'preview'
-  content: string
-  options?: { value: number; label: string }[]
-  questionId?: string
-  round?: number
-  score?: number
-  showRegisterPrompt?: boolean
-}
-
-const messages = ref<Message[]>([])
 const assessmentId = ref(0)
 const currentRound = ref(0)
 const totalRounds = ref(10)
-const status = ref<'idle' | 'active' | 'completed'>('idle')
-const selectedOption = ref<number | null>(null)
-const chatContainer = ref<HTMLElement | null>(null)
-const sessionId = ref(localStorage.getItem('session_id') || '')
+const question = ref<Question | null>(null)
+const selected = ref<number | null>(null)
+const loading = ref(true)
+const submitting = ref(false)
+const generating = ref(false)
+const error = ref('')
 
-function scrollToBottom() {
-  nextTick(() => {
-    if (chatContainer.value) {
-      chatContainer.value.scrollTop = chatContainer.value.scrollHeight
+const progress = computed(() => Math.max(4, (currentRound.value / totalRounds.value) * 100))
+const dimensionLabel = computed(() => dimensionNames[question.value?.dimension || ''] || '优势探索')
+
+function authHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${auth.accessToken}`,
+  }
+}
+
+async function readSSE(response: Response, onEvent: (event: string, data: any) => Promise<void> | void) {
+  if (!response.ok) throw new Error(`请求失败（${response.status}）`)
+  const reader = response.body?.getReader()
+  if (!reader) throw new Error('浏览器无法读取测评流')
+
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  async function processBlock(block: string) {
+    let event = 'message'
+    let data: any = null
+    for (const line of block.split(/\r?\n/)) {
+      if (line.startsWith('event:')) event = line.slice(6).trim()
+      if (line.startsWith('data:')) data = JSON.parse(line.slice(5).trim())
     }
-  })
+    if (data !== null) await onEvent(event, data)
+  }
+
+  while (true) {
+    const { done, value } = await reader.read()
+    buffer += decoder.decode(value || new Uint8Array(), { stream: !done })
+    const blocks = buffer.split(/\r?\n\r?\n/)
+    buffer = blocks.pop() || ''
+    for (const block of blocks) await processBlock(block)
+    if (done) break
+  }
+  if (buffer.trim()) await processBlock(buffer)
+}
+
+function acceptQuestion(data: any) {
+  question.value = {
+    questionId: data.question_id,
+    text: data.question_text,
+    agentMessage: data.agent_message || '慢慢来，选择最接近你真实状态的答案。',
+    dimension: data.target_dimension,
+    round: data.round,
+  }
+  currentRound.value = data.round
+  selected.value = null
 }
 
 async function startAssessment() {
-  status.value = 'active'
-  messages.value = []
-  const token = auth.accessToken
-  const headers: Record<string, string> = {}
-  if (token) headers['Authorization'] = `Bearer ${token}`
-
-  const res = await fetch('/api/v1/assessment/start', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...headers },
-  })
-
-  const reader = res.body?.getReader()
-  if (!reader) return
-
-  const decoder = new TextDecoder()
-  let buffer = ''
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buffer += decoder.decode(value, { stream: true })
-
-    const lines = buffer.split('\n')
-    buffer = lines.pop() || ''
-
-    for (const line of lines) {
-      if (line.startsWith('event: ')) continue
-      if (line.startsWith('data: ')) {
-        const data = JSON.parse(line.slice(6))
-        handleSSEEvent(data)
+  loading.value = true
+  error.value = ''
+  try {
+    const response = await fetch('/api/v1/assessment/start', {
+      method: 'POST',
+      headers: authHeaders(),
+    })
+    await readSSE(response, async (event, data) => {
+      if (event === 'start') {
+        assessmentId.value = data.assessment_id
+        totalRounds.value = data.total_rounds || 10
       }
-    }
+      if (event === 'question' || data.question_id) acceptQuestion(data)
+    })
+  } catch (e: any) {
+    error.value = e.message || '测评启动失败，请稍后重试。'
+  } finally {
+    loading.value = false
   }
 }
 
-function handleSSEEvent(data: any) {
-  if (data.assessment_id) {
-    assessmentId.value = data.assessment_id
-    totalRounds.value = data.total_rounds || 10
-  }
-  if (data.question_id) {
-    currentRound.value = data.round
-    messages.value.push({
-      role: 'agent',
-      content: data.agent_message || questionMessages[data.target_dimension] || '...',
-    })
-    messages.value.push({
-      role: 'agent',
-      content: data.question_text,
-      options: [
-        { value: 1, label: '非常不符合' },
-        { value: 2, label: '不太符合' },
-        { value: 3, label: '一般' },
-        { value: 4, label: '比较符合' },
-        { value: 5, label: '非常符合' },
-      ],
-      questionId: data.question_id,
-      round: data.round,
-    })
-    selectedOption.value = null
-    scrollToBottom()
-  }
-  if (data.score !== undefined && data.show_register_prompt) {
-    messages.value.push({
-      role: 'preview',
-      content: data.message || '初步评估完成，想看完整报告吗？',
-      score: data.score,
-      showRegisterPrompt: true,
-    })
-    scrollToBottom()
-  }
-  if (data.message === '测评已完成') {
-    status.value = 'completed'
-    messages.value.push({
-      role: 'agent',
-      content: '测评完成！正在生成你的报告...',
-    })
-    // Navigate to generate report
-    router.push(`/report/${assessmentId.value}`)
+async function finishAssessment() {
+  if (generating.value) return
+  generating.value = true
+  error.value = ''
+  try {
+    const generated = await generateReport(assessmentId.value)
+    await router.push(`/report/${getGeneratedReportId(generated)}`)
+  } catch {
+    error.value = '报告生成失败，请检查网络后重试。'
+    generating.value = false
   }
 }
 
-async function selectOption(value: number) {
-  selectedOption.value = value
-  const lastMsg = messages.value[messages.value.length - 1]
-  messages.value.push({ role: 'user', content: getOptionLabel(value) })
-  scrollToBottom()
-
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (auth.accessToken) headers['Authorization'] = `Bearer ${auth.accessToken}`
-
-  const body: any = { question_id: lastMsg.questionId, answer_value: value }
-  if (sessionId.value) body.session_id = sessionId.value
-
-  const res = await fetch(`/api/v1/assessment/${assessmentId.value}/answer`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
-  })
-
-  const reader = res.body?.getReader()
-  if (!reader) return
-  const decoder = new TextDecoder()
-  let buffer = ''
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split('\n')
-    buffer = lines.pop() || ''
-    for (const line of lines) {
-      if (line.startsWith('event: ')) {
-        const eventType = line.slice(7)
-        if (eventType === 'complete') {
-          status.value = 'completed'
-          messages.value.push({ role: 'agent', content: '测评完成！正在生成报告...' })
-          router.push(`/report/${assessmentId.value}`)
-        }
-        continue
+async function submitAnswer(value: number) {
+  if (!question.value || submitting.value) return
+  selected.value = value
+  submitting.value = true
+  error.value = ''
+  try {
+    const response = await fetch(`/api/v1/assessment/${assessmentId.value}/answer`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        question_id: question.value.questionId,
+        answer_value: value,
+      }),
+    })
+    await readSSE(response, async (event, data) => {
+      if (event === 'complete') {
+        await finishAssessment()
+        return
       }
-      if (line.startsWith('data: ')) {
-        const d = JSON.parse(line.slice(6))
-        if (d.question_id) handleSSEEvent(d)
-        if (d.score !== undefined && d.show_register_prompt) {
-          messages.value.push({
-            role: 'preview',
-            content: d.message,
-            score: d.score,
-            showRegisterPrompt: true,
-          })
-          scrollToBottom()
-        }
-      }
-    }
+      if (event === 'error') throw new Error(data.msg || '答案提交失败')
+      if (event === 'question' || data.question_id) acceptQuestion(data)
+    })
+  } catch (e: any) {
+    error.value = e.message || '答案提交失败，请稍后再试。'
+    selected.value = null
+  } finally {
+    submitting.value = false
   }
 }
 
-function getOptionLabel(v: number) {
-  const map: Record<number, string> = { 1: '非常不符合', 2: '不太符合', 3: '一般', 4: '比较符合', 5: '非常符合' }
-  return map[v] || ''
-}
-
-const questionMessages: Record<string, string> = {
-  thinking: '接下来想了解你的思维方式...',
-  creativity: '很好，来看看你的创造力...',
-  execution: '现在来了解你的执行力...',
-  social: '来看看你在团队中的角色...',
-  emotional: '接下来关注你的情绪调节能力...',
-  drive: '最后来探索你的内在驱动力...',
-}
-
-onMounted(() => {
-  startAssessment()
-})
+onMounted(startAssessment)
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col bg-slate-50">
-    <!-- Header -->
-    <div class="sticky top-0 bg-white/90 backdrop-blur px-4 py-3 border-b border-slate-100 z-10">
-      <div class="flex items-center gap-2">
-        <button @click="router.push('/')" class="text-slate-400">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+  <main class="min-h-screen pb-10">
+    <header class="border-b border-[var(--seed-border)] bg-[var(--seed-canvas)]/80 backdrop-blur-xl">
+      <div class="seed-shell seed-nav">
+        <button class="seed-brand border-0 bg-transparent p-0" @click="router.push('/')">
+          <span class="seed-mark" aria-hidden="true" />
+          <span>Seed</span>
         </button>
-        <h1 class="text-lg font-semibold text-slate-800">优势测评</h1>
+        <button class="min-h-11 rounded-xl px-3 text-sm font-medium text-[var(--seed-muted)]" @click="router.push('/')">暂时退出</button>
       </div>
-      <!-- Progress -->
-      <div class="mt-2 flex items-center gap-2">
-        <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-          <div
-            class="h-full bg-indigo-500 rounded-full transition-all duration-500"
-            :style="{ width: `${(currentRound / totalRounds) * 100}%` }"
-          />
+    </header>
+
+    <section class="seed-shell mx-auto max-w-[900px] pt-8 sm:pt-14">
+      <div class="mb-8 flex items-end justify-between gap-4">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[.2em] text-[var(--seed-green)]">优势测评</p>
+          <h1 class="mt-2 text-2xl font-semibold tracking-[-.035em] sm:text-3xl">跟随第一直觉，不必过度思考。</h1>
         </div>
-        <span class="text-xs text-slate-400">{{ currentRound }}/{{ totalRounds }}</span>
+        <span class="shrink-0 text-sm font-semibold tabular-nums text-[var(--seed-muted)]">{{ currentRound }}/{{ totalRounds }}</span>
       </div>
-    </div>
 
-    <!-- Chat -->
-    <div ref="chatContainer" class="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-      <template v-for="(msg, i) in messages" :key="i">
-        <!-- Agent message -->
-        <div v-if="msg.role === 'agent' && !msg.options" class="flex gap-2">
-          <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
-            <span class="text-indigo-500 text-sm">AI</span>
-          </div>
-          <div class="bg-white rounded-2xl rounded-tl-sm px-3.5 py-2.5 text-slate-700 text-sm max-w-[80%] shadow-sm">
-            {{ msg.content }}
+      <div class="mb-7 h-1.5 overflow-hidden rounded-full bg-black/6">
+        <div class="h-full rounded-full bg-[var(--seed-green)] transition-[width] duration-500" :style="{ width: `${progress}%` }" />
+      </div>
+
+      <div v-if="error" role="alert" class="mb-5 flex items-center justify-between gap-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <span>{{ error }}</span>
+        <button v-if="!assessmentId" class="shrink-0 font-semibold underline" @click="startAssessment">重试</button>
+        <button v-else-if="generating === false && currentRound >= totalRounds" class="shrink-0 font-semibold underline" @click="finishAssessment">重新生成</button>
+      </div>
+
+      <div v-if="loading || generating" class="seed-card flex min-h-[470px] flex-col items-center justify-center p-8 text-center">
+        <div class="relative h-14 w-14">
+          <div class="absolute inset-0 animate-ping rounded-full bg-[var(--seed-green-soft)]" />
+          <div class="relative flex h-14 w-14 items-center justify-center rounded-full bg-[var(--seed-green)] text-white">
+            <span class="seed-mark !border-0 !bg-transparent brightness-0 invert" />
           </div>
         </div>
+        <h2 class="mt-7 text-xl font-semibold">{{ generating ? '正在生成你的优势报告' : '正在准备第一道问题' }}</h2>
+        <p class="mt-2 text-sm text-[var(--seed-muted)]">{{ generating ? '我们正在整理六个维度的证据与建议…' : 'AI 正在从科学题库中选择起点…' }}</p>
+      </div>
 
-        <!-- Question card -->
-        <div v-if="msg.options" class="flex gap-2">
-          <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
-            <span class="text-indigo-500 text-sm">AI</span>
-          </div>
-          <div class="bg-white rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%] shadow-sm">
-            <p class="text-slate-700 text-sm mb-3">{{ msg.content }}</p>
-            <div class="space-y-2">
-              <button
-                v-for="opt in msg.options"
-                :key="opt.value"
-                @click="selectOption(opt.value)"
-                :disabled="selectedOption !== null"
-                class="w-full text-left px-3.5 py-2.5 rounded-xl border text-sm transition-all"
-                :class="selectedOption === opt.value
-                  ? 'border-indigo-400 bg-indigo-50 text-indigo-600'
-                  : 'border-slate-200 text-slate-600 hover:border-indigo-200'"
-              >
-                {{ opt.label }}
-              </button>
+      <article v-else-if="question" class="seed-card overflow-hidden">
+        <div class="border-b border-[var(--seed-border)] px-5 py-4 sm:px-8">
+          <div class="flex items-center gap-3">
+            <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--seed-green-soft)] text-xs font-bold text-[var(--seed-green)]">AI</span>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[.16em] text-[var(--seed-muted)]">{{ dimensionLabel }}</p>
+              <p class="mt-0.5 text-sm text-[var(--seed-muted)]">{{ question.agentMessage }}</p>
             </div>
           </div>
         </div>
 
-        <!-- User answer -->
-        <div v-if="msg.role === 'user'" class="flex justify-end">
-          <div class="bg-indigo-500 text-white rounded-2xl rounded-tr-sm px-3.5 py-2.5 text-sm max-w-[75%]">
-            {{ msg.content }}
-          </div>
-        </div>
+        <div class="px-5 py-7 sm:px-10 sm:py-10">
+          <p class="text-xs font-semibold text-[var(--seed-gold)]">问题 {{ question.round }}</p>
+          <h2 class="mt-3 max-w-3xl text-2xl font-semibold leading-[1.42] tracking-[-.035em] sm:text-3xl">{{ question.text }}</h2>
 
-        <!-- Preview -->
-        <div v-if="msg.role === 'preview'" class="flex gap-2">
-          <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
-            <span class="text-indigo-500 text-sm">AI</span>
+          <div class="mt-8 grid gap-3 sm:grid-cols-5">
+            <button
+              v-for="value in 5"
+              :key="value"
+              class="group min-h-[88px] rounded-2xl border p-3 text-center transition disabled:cursor-wait disabled:opacity-60"
+              :class="selected === value
+                ? 'border-[var(--seed-green)] bg-[var(--seed-green)] text-white shadow-lg shadow-green-900/10'
+                : 'border-[var(--seed-border)] bg-white/55 hover:-translate-y-0.5 hover:border-[var(--seed-green)] hover:bg-white'"
+              :disabled="submitting"
+              @click="submitAnswer(value)"
+            >
+              <span class="block text-lg font-semibold">{{ value }}</span>
+              <span class="mt-2 block text-xs" :class="selected === value ? 'text-white/80' : 'text-[var(--seed-muted)]'">{{ labels[value] }}</span>
+            </button>
           </div>
-          <div class="bg-white rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%] shadow-sm">
-            <p class="text-slate-700 text-sm mb-2">{{ msg.content }}</p>
-            <div v-if="msg.score" class="flex items-center gap-2 mb-2">
-              <span class="text-2xl font-bold text-indigo-500">{{ msg.score }}</span>
-              <span class="text-xs text-slate-400">思维力初步分数</span>
-            </div>
-            <div v-if="msg.showRegisterPrompt && !auth.isAuthenticated" class="flex gap-2 mt-2">
-              <button @click="router.push('/register')" class="flex-1 py-2 rounded-lg bg-indigo-500 text-white text-sm font-medium">
-                注册查看完整报告
-              </button>
-              <button @click="selectOption(0)" class="flex-1 py-2 rounded-lg border border-slate-200 text-slate-500 text-sm">
-                继续测评
-              </button>
-            </div>
+
+          <div class="mt-7 flex items-center justify-between gap-4 text-xs text-[var(--seed-muted)]">
+            <span>没有正确答案，真实比完美更重要。</span>
+            <span v-if="submitting" class="font-semibold text-[var(--seed-green)]">正在记录…</span>
           </div>
         </div>
-      </template>
-    </div>
-  </div>
+      </article>
+    </section>
+  </main>
 </template>

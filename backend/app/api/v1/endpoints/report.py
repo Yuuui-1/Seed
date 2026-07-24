@@ -50,7 +50,12 @@ async def get_report(report_id: int, user_id: int = Depends(require_auth), db: A
 
 @router.post("/generate/{assessment_id}")
 async def generate_report_endpoint(assessment_id: int, user_id: int = Depends(require_auth), db: AsyncSession = Depends(get_session)):
-    report = await assessment_service.finalize_report(db, assessment_id, user_id)
+    try:
+        report = await assessment_service.finalize_report(db, assessment_id, user_id)
+    except assessment_service.AssessmentNotFoundError:
+        raise HTTPException(404, detail={"code": 1003, "msg": "测评不存在"})
+    except assessment_service.AssessmentNotCompletedError:
+        raise HTTPException(409, detail={"code": 1004, "msg": "测评尚未完成"})
     if not report:
         raise HTTPException(400, detail={"code": 1003, "msg": "测评不存在或无回答"})
     return {

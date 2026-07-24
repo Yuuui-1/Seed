@@ -1,5 +1,16 @@
 import client from './client'
 
+interface GeneratedReportResponse {
+  data: {
+    id: number
+    assessment_id: number
+  }
+}
+
+export function getGeneratedReportId(response: GeneratedReportResponse): number {
+  return response.data.id
+}
+
 export function generateReport(assessmentId: number) {
   return client.post(`/reports/generate/${assessmentId}`)
 }

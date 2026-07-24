@@ -39,3 +39,6 @@ venv/
 # coverage
 coverage/
 htmlcov/
+
+# isolated feature worktrees
+.worktrees/
