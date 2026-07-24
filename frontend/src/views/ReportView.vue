@@ -15,13 +15,20 @@ const sharing = ref(false)
 const shareMessage = ref('')
 let chart: echarts.ECharts | null = null
 
-const dimensions = computed(() => report.value ? Object.values(report.value.dimensions) as any[] : [])
+const dimensions = computed(() => {
+  if (!report.value?.dimensions) return []
+  const dims = report.value.dimensions
+  return typeof dims === 'object' ? Object.values(dims) as any[] : []
+})
 const topDimensions = computed(() => [...dimensions.value].sort((a, b) => b.score - a.score).slice(0, 2))
 
 function renderRadar() {
   const el = document.getElementById('radar-chart')
   if (!el || !report.value) return
+  if (!dimensions.value.length) return
   chart?.dispose()
+  el.style.width = el.clientWidth + 'px'
+  el.style.height = '350px'
   chart = echarts.init(el)
   chart.setOption({
     radar: {
@@ -53,7 +60,7 @@ async function loadReport() {
     const response = await getReport(Number(route.params.id))
     report.value = response.data
     await nextTick()
-    renderRadar()
+    setTimeout(renderRadar, 300)
   } catch {
     report.value = null
     error.value = '这份报告暂时无法加载，可能已失效或不属于当前账户。'
@@ -80,7 +87,7 @@ async function createShareLink() {
 
 onMounted(() => {
   loadReport()
-  window.addEventListener('resize', renderRadar)
+  window.addEventListener('resize', () => setTimeout(renderRadar, 200))
 })
 
 onBeforeUnmount(() => {
