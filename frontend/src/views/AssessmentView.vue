@@ -160,24 +160,30 @@ async function submitAnswer(value: number) {
 }
 
 async function undoLast() {
-  if (currentRound.value <= 0) return
+  if (currentRound.value <= 0 || submitting.value) return
+  submitting.value = true
   try {
     const r = await fetch(`/api/v1/assessment/${assessmentId.value}/undo`, {
       method: 'POST', headers: authHeaders(),
     })
-    if (r.ok) {
-      lastAnswerUndone.value = true
-      currentRound.value = Math.max(0, currentRound.value - 1)
-      selected.value = null
-      question.value = null
-      // Fetch current state
-      const res = await fetch(`/api/v1/assessment/${assessmentId.value}/progress`, { headers: authHeaders() })
-      if (res.ok) {
-        const p = await res.json()
-        currentRound.value = p.data.current_round
+    if (!r.ok) return
+    const data = await r.json()
+    currentRound.value = data.data.current_round
+    selected.value = null
+    // Show the undone question again
+    if (data.data.question) {
+      question.value = {
+        questionId: data.data.question.question_id,
+        text: data.data.question.question_text,
+        agentMessage: '',
+        dimension: data.data.question.target_dimension,
+        round: currentRound.value + 1,
       }
     }
-  } catch {}
+    error.value = ''
+  } catch {} finally {
+    submitting.value = false
+  }
 }
 
 onMounted(startAssessment)

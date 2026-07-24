@@ -177,19 +177,20 @@ async def finalize_report(db: AsyncSession, assessment_id: int, user_id: int) ->
     await db.refresh(report)
     return report
 
-async def undo_last_answer(db: AsyncSession, assessment_id: int, user_id: int) -> bool:
-    """Delete the last answer and decrement current_round."""
+async def undo_last_answer(db: AsyncSession, assessment_id: int, user_id: int) -> tuple[bool, dict | None]:
+    """Delete the last answer and decrement current_round. Returns (success, undone_question_data)."""
     assessment = await get_owned_assessment(db, assessment_id, user_id)
     if not assessment or assessment.status != "in_progress" or assessment.current_round == 0:
-        return False
+        return False, None
     answers = await get_assessment_answers(db, assessment_id)
     if not answers:
-        return False
+        return False, None
     last = answers[-1]
+    undone_q = {"question_id": last.question_id, "question_text": last.question_text, "answer_value": last.answer_value, "target_dimension": last.target_dimension}
     await db.delete(last)
     assessment.current_round -= 1
     await db.commit()
-    return True
+    return True, undone_q
 
 async def bind_assessment(db: AsyncSession, assessment_id: int, user_id: int) -> bool:
     result = await db.execute(
