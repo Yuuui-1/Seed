@@ -49,7 +49,7 @@ const dimensionLabel = computed(() => dimensionNames[question.value?.dimension |
 function authHeaders() {
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${auth.accessToken}`,
+    Authorization: `Bearer ${localStorage.getItem('access_token') || auth.accessToken}`,
   }
 }
 
