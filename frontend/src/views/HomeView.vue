@@ -63,11 +63,11 @@ function logout() {
           <span class="text-[var(--seed-green)]">成长优势。</span>
         </h1>
         <p class="mt-7 max-w-xl text-lg leading-8 text-[var(--seed-muted)] md:text-xl">
-          一次安静、清晰的 AI 优势测评。基于经典心理量表，自适应理解你的思维、创造、执行与内在驱动力。
+          基于大五人格、认知需求、自我决定理论，通过自适应选题深入了解你的六维心理画像。
         </p>
         <div class="mt-9 flex flex-col gap-3 sm:flex-row">
           <button class="seed-button seed-button-primary px-7" @click="startAssessment">
-            开始 10 题测评
+            开始测评
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 18 6-6-6-6" />
             </svg>
@@ -76,7 +76,7 @@ function logout() {
             {{ auth.isAuthenticated ? '查看我的报告' : '已有账户，登录' }}
           </button>
         </div>
-        <p class="mt-5 text-xs tracking-wide text-[var(--seed-muted)]">约 5 分钟 · 结果仅你可见 · 随时重新测评</p>
+         <p class="mt-5 text-xs tracking-wide text-[var(--seed-muted)]">约 12 分钟 · 24 题自适应 · 结果仅你可见</p>
       </div>
 
       <div class="relative mx-auto w-full max-w-[520px]">
