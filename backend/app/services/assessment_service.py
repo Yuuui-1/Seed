@@ -7,14 +7,6 @@ from app.agents.question_selector import TOTAL_ROUNDS
 
 PREVIEW_MARKER = 3
 
-class AssessmentNotFoundError(Exception):
-    """The assessment does not exist or is not owned by the current user."""
-
-
-class AssessmentNotCompletedError(Exception):
-    """The assessment exists but is not ready for report generation."""
-
-
 async def create_assessment(db: AsyncSession, user_id: int | None, session_id: str | None) -> Assessment:
     assessment = Assessment(
         user_id=user_id,
@@ -31,17 +23,6 @@ async def get_assessment(db: AsyncSession, assessment_id: int) -> Assessment | N
     result = await db.execute(select(Assessment).where(Assessment.id == assessment_id))
     return result.scalar_one_or_none()
 
-async def get_owned_assessment(
-    db: AsyncSession, assessment_id: int, user_id: int
-) -> Assessment | None:
-    result = await db.execute(
-        select(Assessment).where(
-            Assessment.id == assessment_id,
-            Assessment.user_id == user_id,
-        )
-    )
-    return result.scalar_one_or_none()
-
 async def get_assessment_answers(db: AsyncSession, assessment_id: int) -> list[AssessmentAnswer]:
     result = await db.execute(
         select(AssessmentAnswer)
@@ -56,13 +37,9 @@ async def start_assessment_flow(db: AsyncSession, user_id: int | None, session_i
     return assessment, question
 
 async def submit_answer(
-    db: AsyncSession,
-    assessment_id: int,
-    user_id: int,
-    question_id: str,
-    answer_value: int,
+    db: AsyncSession, assessment_id: int, question_id: str, answer_value: int
 ) -> tuple[Assessment, dict | None]:
-    assessment = await get_owned_assessment(db, assessment_id, user_id)
+    assessment = await get_assessment(db, assessment_id)
     if not assessment or assessment.status != "in_progress":
         return assessment, None
 
@@ -137,18 +114,8 @@ async def submit_answer(
 
 async def finalize_report(db: AsyncSession, assessment_id: int, user_id: int) -> Report | None:
     """Generate and save report after assessment completion."""
-    assessment = await get_owned_assessment(db, assessment_id, user_id)
-    if assessment is None:
-        raise AssessmentNotFoundError
-    if assessment.status != "completed":
-        raise AssessmentNotCompletedError
-
-    existing = await db.execute(
-        select(Report).where(
-            Report.assessment_id == assessment_id,
-            Report.user_id == user_id,
-        )
-    )
+    from sqlalchemy import select as sa_select
+    existing = await db.execute(sa_select(Report).where(Report.assessment_id == assessment_id))
     existing_report = existing.scalar_one_or_none()
     if existing_report:
         return existing_report

@@ -1,6 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { resolveAuthNavigation } from './guards'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -24,7 +22,6 @@ const router = createRouter({
       path: '/assessment/:id?',
       name: 'assessment',
       component: () => import('@/views/AssessmentView.vue'),
-      meta: { requiresAuth: true },
     },
     {
       path: '/report/:id',
@@ -44,11 +41,6 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
   ],
-})
-
-router.beforeEach((to) => {
-  if (!to.meta.requiresAuth) return true
-  return resolveAuthNavigation(useAuthStore().isAuthenticated, to.fullPath)
 })
 
 export default router

@@ -1,10 +1,10 @@
 import json
 import asyncio
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 from app.db.session import get_session
-from app.core.deps import require_auth
+from app.core.deps import require_auth, get_current_user_id
 from app.schemas.assessment import AnswerRequest
 from app.services import assessment_service
 from app.agents.orchestrator import OPTIONS, TOTAL_ROUNDS
@@ -17,23 +17,19 @@ async def _start_stream(assessment_id: int, question: dict):
     yield {"event": "question", "data": json.dumps(question)}
 
 @router.post("/start")
-async def start_assessment(
-    user_id: int = Depends(require_auth),
-    db: AsyncSession = Depends(get_session),
-):
-    assessment, question = await assessment_service.start_assessment_flow(db, user_id, None)
+async def start_assessment(request: Request, db: AsyncSession = Depends(get_session)):
+    user_id = await _extract_user_id(request)
+    session_id = None
+    if not user_id:
+        import uuid
+        session_id = f"anon_{uuid.uuid4().hex[:16]}"
+
+    assessment, question = await assessment_service.start_assessment_flow(db, user_id, session_id)
     return EventSourceResponse(_start_stream(assessment.id, question))
 
 @router.post("/{assessment_id}/answer")
-async def submit_answer(
-    assessment_id: int,
-    req: AnswerRequest,
-    user_id: int = Depends(require_auth),
-    db: AsyncSession = Depends(get_session),
-):
-    assessment, result = await assessment_service.submit_answer(
-        db, assessment_id, user_id, req.question_id, req.answer_value
-    )
+async def submit_answer(assessment_id: int, req: AnswerRequest, db: AsyncSession = Depends(get_session)):
+    assessment, result = await assessment_service.submit_answer(db, assessment_id, req.question_id, req.answer_value)
     if not assessment:
         raise HTTPException(404, detail={"code": 1003, "msg": "测评不存在"})
 
@@ -61,12 +57,8 @@ async def submit_answer(
     return EventSourceResponse(stream())
 
 @router.get("/{assessment_id}/progress")
-async def get_progress(
-    assessment_id: int,
-    user_id: int = Depends(require_auth),
-    db: AsyncSession = Depends(get_session),
-):
-    assessment = await assessment_service.get_owned_assessment(db, assessment_id, user_id)
+async def get_progress(assessment_id: int, db: AsyncSession = Depends(get_session)):
+    assessment = await assessment_service.get_assessment(db, assessment_id)
     if not assessment:
         raise HTTPException(404, detail={"code": 1003, "msg": "测评不存在"})
     return {"code": 0, "data": {
@@ -82,3 +74,13 @@ async def bind_assessment(assessment_id: int, user_id: int = Depends(require_aut
     if not ok:
         raise HTTPException(404, detail={"code": 1003, "msg": "测评不存在或已绑定"})
     return {"code": 0, "data": {"bound": True}, "msg": "success"}
+
+async def _extract_user_id(request: Request) -> int | None:
+    auth = request.headers.get("Authorization")
+    if not auth or not auth.startswith("Bearer "):
+        return None
+    from app.core.security import verify_token
+    payload = verify_token(auth.replace("Bearer ", ""))
+    if not payload or payload.get("type") != "access":
+        return None
+    return int(payload.get("sub", 0)) or None

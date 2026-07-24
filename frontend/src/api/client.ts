@@ -1,10 +1,5 @@
 import axios from 'axios'
-import type { InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '@/stores/auth'
-
-interface RetryableRequestConfig extends InternalAxiosRequestConfig {
-  _retry?: boolean
-}
 
 const client = axios.create({
   baseURL: '/api/v1',
@@ -23,17 +18,14 @@ client.interceptors.request.use((config) => {
 client.interceptors.response.use(
   (res) => res.data,
   async (error) => {
-    const config = error.config as RetryableRequestConfig | undefined
-    if (error.response?.status === 401 && config && !config._retry) {
-      config._retry = true
+    if (error.response?.status === 401) {
       const authStore = useAuthStore()
       const refreshed = await authStore.tryRefreshToken()
       if (refreshed) {
-        return client(config)
+        return client(error.config!)
       }
       authStore.logout()
-      const redirect = `${window.location.pathname}${window.location.search}`
-      window.location.assign(`/login?redirect=${encodeURIComponent(redirect)}`)
+      window.location.href = '/'
     }
     return Promise.reject(error)
   }

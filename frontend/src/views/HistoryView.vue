@@ -1,97 +1,58 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { listReports } from '@/api/report'
 
 const router = useRouter()
 const reports = ref<any[]>([])
 const loading = ref(true)
-const error = ref('')
 
-function topDimensions(dimensions: Record<string, any>) {
-  return Object.values(dimensions).sort((a: any, b: any) => b.score - a.score).slice(0, 3)
-}
-
-async function loadReports() {
-  loading.value = true
-  error.value = ''
+onMounted(async () => {
   try {
-    const response = await listReports()
-    reports.value = response.data.items || []
-  } catch {
-    error.value = '历史报告加载失败，请稍后重试。'
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(loadReports)
+    const res = await listReports()
+    reports.value = res.data.items || []
+  } catch {}
+  loading.value = false
+})
 </script>
 
 <template>
-  <main class="min-h-screen pb-16">
-    <header class="border-b border-[var(--seed-border)] bg-[var(--seed-canvas)]/80 backdrop-blur-xl">
-      <div class="seed-shell seed-nav">
-        <button class="seed-brand border-0 bg-transparent p-0" @click="router.push('/')">
-          <span class="seed-mark" aria-hidden="true" />
-          <span>Seed</span>
-        </button>
-        <button class="seed-button seed-button-primary !min-h-10 !px-4 text-sm" @click="router.push('/assessment')">开始新测评</button>
-      </div>
-    </header>
+  <div class="min-h-screen pb-12" style="background: #f8f6f0">
+    <div class="sticky top-0 z-10 px-4 py-3 border-b flex items-center gap-2"
+      style="background: rgba(248,246,240,0.92); backdrop-filter: blur(8px); border-color: #e2d8c0">
+      <button @click="router.push('/')" style="color: #9b8a70">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <h1 class="display-font text-lg font-semibold" style="color: #5a4220">历史报告</h1>
+    </div>
 
-    <section class="seed-shell pt-10 sm:pt-16">
-      <div class="max-w-2xl">
-        <p class="text-xs font-semibold uppercase tracking-[.22em] text-[var(--seed-green)]">Your growth archive</p>
-        <h1 class="mt-4 text-4xl font-semibold tracking-[-.055em] sm:text-6xl">每一次回答，<br>都是成长的切片。</h1>
-        <p class="mt-5 text-base leading-8 text-[var(--seed-muted)]">回看不同阶段的优势画像，观察什么始终稳定，什么正在发生变化。</p>
-      </div>
+    <div v-if="loading" class="flex justify-center py-24">
+      <div class="w-10 h-10 border-2 rounded-full animate-spin" style="border-color: #b8945a; border-top-color: transparent"/>
+    </div>
 
-      <div v-if="loading" class="mt-14 grid gap-4 md:grid-cols-2">
-        <div v-for="i in 4" :key="i" class="seed-card h-[230px] animate-pulse bg-white/45" />
-      </div>
+    <div v-else-if="reports.length === 0" class="text-center py-24">
+      <p style="color: #9b8a70">还没有报告</p>
+      <button @click="router.push('/assessment')" class="mt-4 px-8 py-3 rounded-xl text-white font-medium" style="background: #b8945a">开始测评</button>
+    </div>
 
-      <div v-else-if="error" class="seed-card mt-14 max-w-xl p-7">
-        <p class="text-sm text-red-700">{{ error }}</p>
-        <button class="seed-button seed-button-secondary mt-5" @click="loadReports">重新加载</button>
+    <div v-else class="mx-4 mt-4 space-y-3">
+      <div v-for="r in reports" :key="r.id" @click="router.push(`/report/${r.id}`)"
+        class="rounded-2xl p-5 cursor-pointer transition-all active:scale-[0.98]" style="background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.03)">
+        <div class="flex justify-between items-center mb-3">
+          <span class="text-xs" style="color: #9b8a70">{{ new Date(r.created_at).toLocaleDateString() }}</span>
+          <svg class="w-4 h-4" style="color: #c4a97a" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <span v-for="(dim, key) in r.dimensions" :key="key"
+            class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+            :style="dim.score >= 75
+              ? 'background: #c5d8c3; color: #4a7a40'
+              : dim.score >= 50
+              ? 'background: #f0ece0; color: #7d5e30'
+              : 'background: #f5e0d8; color: #a06040'"
+          >{{ dim.label }} {{ dim.score }}</span>
+        </div>
       </div>
-
-      <div v-else-if="reports.length === 0" class="seed-card mt-14 flex min-h-[360px] flex-col items-center justify-center p-8 text-center">
-        <span class="seed-mark !h-14 !w-14 !rounded-2xl" />
-        <h2 class="mt-6 text-2xl font-semibold">还没有第一份报告</h2>
-        <p class="mt-3 max-w-sm text-sm leading-7 text-[var(--seed-muted)]">完成 10 道自适应问题，建立你的六维优势画像。</p>
-        <button class="seed-button seed-button-primary mt-7" @click="router.push('/assessment')">开始测评</button>
-      </div>
-
-      <div v-else class="mt-14 grid gap-5 md:grid-cols-2">
-        <article
-          v-for="(item, index) in reports"
-          :key="item.id"
-          class="seed-card group cursor-pointer overflow-hidden p-6 transition hover:-translate-y-1 hover:shadow-[var(--seed-shadow)] sm:p-7"
-          tabindex="0"
-          @click="router.push(`/report/${item.id}`)"
-          @keydown.enter="router.push(`/report/${item.id}`)"
-        >
-          <div class="flex items-start justify-between gap-5">
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-[.18em] text-[var(--seed-gold)]">Profile {{ String(reports.length - index).padStart(2, '0') }}</p>
-              <h2 class="mt-3 text-xl font-semibold">优势画像报告</h2>
-              <p class="mt-1 text-sm text-[var(--seed-muted)]">{{ new Date(item.created_at).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }) }}</p>
-            </div>
-            <span class="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--seed-border)] bg-white/55 transition group-hover:bg-[var(--seed-green)] group-hover:text-white">
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 18 6-6-6-6" /></svg>
-            </span>
-          </div>
-          <div class="mt-8 border-t border-[var(--seed-border)] pt-5">
-            <p class="text-xs font-medium text-[var(--seed-muted)]">当期突出优势</p>
-            <div class="mt-3 flex flex-wrap gap-2">
-              <span v-for="dim in topDimensions(item.dimensions)" :key="dim.label" class="rounded-full bg-[var(--seed-green-soft)] px-3 py-1.5 text-xs font-semibold text-[var(--seed-green-deep)]">
-                {{ dim.label }} · {{ dim.score }}
-              </span>
-            </div>
-          </div>
-        </article>
-      </div>
-    </section>
-  </main>
+    </div>
+  </div>
 </template>
