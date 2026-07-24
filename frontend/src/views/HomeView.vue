@@ -58,7 +58,7 @@ function logout() {
           <span class="h-1.5 w-1.5 rounded-full bg-[var(--seed-green)]" />
           科学量表 × 自适应选题
         </div>
-        <h1 class="text-[clamp(3rem,8vw,6.7rem)] font-semibold leading-[.92] tracking-[-.075em] text-[var(--seed-ink)]">
+        <h1 class="text-[clamp(3rem,8vw,6.7rem)] font-semibold leading-[1.05] tracking-[-.04em] text-[var(--seed-ink)]">
           看见你的<br>
           <span class="text-[var(--seed-green)]">成长优势。</span>
         </h1>

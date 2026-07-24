@@ -72,7 +72,7 @@ def calculate_dimension_score(answers: list[dict], dimension: str) -> tuple[floa
     if total_weight == 0:
         return 0.0, 0.0
 
-    score = (weighted_sum / total_weight) * 20  # Map 1-5 to 0-100
+    score = (weighted_sum / total_weight) * 25 - 25  # Map 1-5 to 0-100
     std = math.sqrt(sum((v - (score / 20)) ** 2 for v in values) / len(values)) if len(values) > 1 else 1.0
     confidence = 1.0 - min(std / 2.5, 0.9)
     return round(score, 1), round(confidence, 3)
